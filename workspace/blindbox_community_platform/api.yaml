@@ -1,0 +1,2366 @@
+openapi: "3.0.3"
+info:
+  title: "BlindBox Community Platform API"
+  description: "盲盒社区平台 RESTful API 契约，涵盖用户、藏品、交易、社区、资讯、管理等功能"
+  version: "1.0.0"
+servers:
+  - url: "http://localhost:8080"
+    description: "本地开发服务器"
+  - url: "https://api.blindbox.example.com"
+    description: "生产服务器"
+
+tags:
+  - name: "Auth"
+    description: "认证相关接口"
+  - name: "User"
+    description: "用户个人操作"
+  - name: "Admin - Users"
+    description: "管理员 - 用户管理"
+  - name: "Admin - Roles"
+    description: "管理员 - 角色与权限管理"
+  - name: "Collections"
+    description: "藏品管理"
+  - name: "Collection Categories"
+    description: "藏品分类"
+  - name: "Exchange Requests"
+    description: "交换请求管理"
+  - name: "Trade Orders"
+    description: "交易订单管理"
+  - name: "Trade Reviews"
+    description: "交易评价管理"
+  - name: "Posts"
+    description: "帖子管理"
+  - name: "Comments"
+    description: "评论管理"
+  - name: "Dynamics"
+    description: "动态管理"
+  - name: "Favorites"
+    description: "收藏"
+  - name: "Follows"
+    description: "关注"
+  - name: "Reports"
+    description: "举报管理"
+  - name: "Articles"
+    description: "资讯管理"
+  - name: "Article Categories"
+    description: "资讯分类"
+  - name: "Announcements"
+    description: "公告管理"
+  - name: "Classification Labels"
+    description: "分类标签管理"
+  - name: "System Configs"
+    description: "系统配置"
+  - name: "Admin - Statistics"
+    description: "管理员 - 数据统计"
+  - name: "Admin - Review"
+    description: "管理员 - 内容审核"
+
+paths:
+  # ======================== 认证 Auth ========================
+  /api/auth/register:
+    post:
+      tags: ["Auth"]
+      summary: "用户注册"
+      operationId: "register"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: "注册成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/auth/login:
+    post:
+      tags: ["Auth"]
+      summary: "用户登录"
+      operationId: "login"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: "登录成功，返回JWT令牌"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/auth/reset-password:
+    post:
+      tags: ["Auth"]
+      summary: "密码找回 / 重置密码请求"
+      operationId: "resetPasswordRequest"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: ["email"]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: "注册邮箱"
+      responses:
+        '200':
+          description: "重置邮件已发送"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ======================== 用户个人操作 ========================
+  /api/user/profile:
+    get:
+      tags: ["User"]
+      summary: "获取当前登录用户个人信息"
+      operationId: "getMyProfile"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "用户信息"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: ["User"]
+      summary: "更新个人信息"
+      operationId: "updateMyProfile"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: "更新成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/user/profile/avatar:
+    post:
+      tags: ["User"]
+      summary: "上传头像"
+      operationId: "uploadAvatar"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "头像图片文件"
+      responses:
+        '200':
+          description: "头像上传成功，返回新的URL"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatarUrl:
+                    type: string
+                    description: "新头像URL"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/user/profile/password:
+    put:
+      tags: ["User"]
+      summary: "修改密码"
+      operationId: "changePassword"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+      responses:
+        '200':
+          description: "密码修改成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/user/account:
+    delete:
+      tags: ["User"]
+      summary: "注销当前账户"
+      operationId: "deleteMyAccount"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "账户已注销"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ======================== 管理员 - 用户管理 ========================
+  /api/admin/users:
+    get:
+      tags: ["Admin - Users"]
+      summary: "查看用户列表（分页）"
+      operationId: "adminListUsers"
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["active", "disabled"]
+          description: "按状态过滤"
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: "用户名或邮箱模糊搜索"
+      responses:
+        '200':
+          description: "分页用户列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/users/{id}:
+    get:
+      tags: ["Admin - Users"]
+      summary: "查看某用户详情"
+      operationId: "adminGetUserById"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "用户ID"
+      responses:
+        '200':
+          description: "用户详情"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/users/{id}/status:
+    put:
+      tags: ["Admin - Users"]
+      summary: "禁用/启用用户"
+      operationId: "adminUpdateUserStatus"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "用户ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: ["status"]
+              properties:
+                status:
+                  type: string
+                  enum: ["active", "disabled"]
+                  description: "目标状态"
+      responses:
+        '200':
+          description: "状态更新成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/users/{id}/password-reset:
+    put:
+      tags: ["Admin - Users"]
+      summary: "管理员重置用户密码"
+      operationId: "adminResetUserPassword"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "用户ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: ["newPassword"]
+              properties:
+                newPassword:
+                  type: string
+                  minLength: 6
+                  description: "新密码"
+      responses:
+        '200':
+          description: "密码重置成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ======================== 管理员 - 角色与权限 ========================
+  /api/admin/roles:
+    get:
+      tags: ["Admin - Roles"]
+      summary: "获取角色列表"
+      operationId: "listRoles"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "角色列表"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleDTO'
+    post:
+      tags: ["Admin - Roles"]
+      summary: "创建角色"
+      operationId: "createRole"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleRequest'
+      responses:
+        '201':
+          description: "角色已创建"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDTO'
+  /api/admin/roles/{id}:
+    put:
+      tags: ["Admin - Roles"]
+      summary: "更新角色"
+      operationId: "updateRole"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "角色ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleRequest'
+      responses:
+        '200':
+          description: "角色已更新"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDTO'
+    delete:
+      tags: ["Admin - Roles"]
+      summary: "删除角色"
+      operationId: "deleteRole"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "角色ID"
+      responses:
+        '204':
+          description: "删除成功"
+  /api/admin/roles/{id}/permissions:
+    put:
+      tags: ["Admin - Roles"]
+      summary: "分配权限给角色"
+      operationId: "assignRolePermissions"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "角色ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permissionIds:
+                  type: array
+                  items:
+                    type: integer
+                    format: int64
+                  description: "权限ID列表"
+      responses:
+        '200':
+          description: "权限分配成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDTO'
+  /api/admin/permissions:
+    get:
+      tags: ["Admin - Roles"]
+      summary: "获取权限列表"
+      operationId: "listPermissions"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "权限列表"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PermissionDTO'
+  /api/admin/users/{id}/roles:
+    put:
+      tags: ["Admin - Users"]
+      summary: "分配用户角色"
+      operationId: "assignUserRoles"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "用户ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roleIds:
+                  type: array
+                  items:
+                    type: integer
+                    format: int64
+                  description: "角色ID列表"
+      responses:
+        '200':
+          description: "角色分配成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+
+  # ======================== 藏品管理 ========================
+  /api/collections:
+    get:
+      tags: ["Collections"]
+      summary: "查询藏品列表（可搜索/过滤）"
+      operationId: "listCollections"
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: "查看指定用户的藏品（留空则查看当前用户，管理员可查看所有）"
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: series
+          in: query
+          schema:
+            type: string
+        - name: rarity
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["available", "in_exchange", "in_trade", "sold", "locked"]
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: "按名称或描述搜索"
+      responses:
+        '200':
+          description: "藏品分页列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionPage'
+    post:
+      tags: ["Collections"]
+      summary: "添加藏品"
+      operationId: "createCollection"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionRequest'
+      responses:
+        '201':
+          description: "藏品创建成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionDTO'
+  /api/collections/{id}:
+    get:
+      tags: ["Collections"]
+      summary: "查看藏品详情"
+      operationId: "getCollectionById"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "藏品详情"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionDTO'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: ["Collections"]
+      summary: "编辑藏品信息"
+      operationId: "updateCollection"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionRequest'
+      responses:
+        '200':
+          description: "更新成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionDTO'
+    delete:
+      tags: ["Collections"]
+      summary: "删除藏品"
+      operationId: "deleteCollection"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+  /api/collections/{id}/images:
+    post:
+      tags: ["Collections"]
+      summary: "上传藏品图片"
+      operationId: "uploadCollectionImage"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "藏品ID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                sortOrder:
+                  type: integer
+                  default: 0
+      responses:
+        '201':
+          description: "图片上传成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionImageDTO'
+  /api/collections/{collectionId}/images/{imageId}:
+    delete:
+      tags: ["Collections"]
+      summary: "删除藏品图片"
+      operationId: "deleteCollectionImage"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: collectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+
+  # ======================== 藏品分类 ========================
+  /api/collection-categories:
+    get:
+      tags: ["Collection Categories"]
+      summary: "获取藏品分类树"
+      operationId: "listCollectionCategories"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "分类列表（树形结构）"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CollectionCategoryDTO'
+    post:
+      tags: ["Collection Categories"]
+      summary: "创建藏品分类"
+      operationId: "createCollectionCategory"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionCategoryRequest'
+      responses:
+        '201':
+          description: "创建成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionCategoryDTO'
+  /api/collection-categories/{id}:
+    put:
+      tags: ["Collection Categories"]
+      summary: "更新分类"
+      operationId: "updateCollectionCategory"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionCategoryRequest'
+      responses:
+        '200':
+          description: "更新成功"
+    delete:
+      tags: ["Collection Categories"]
+      summary: "删除分类"
+      operationId: "deleteCollectionCategory"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+
+  # ======================== 交换请求 ========================
+  /api/exchange-requests:
+    get:
+      tags: ["Exchange Requests"]
+      summary: "获取交换请求列表（我发起的或匹配我的）"
+      operationId: "listExchangeRequests"
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: ["sent", "received"]
+          description: "sent-我发起的，received-匹配给我的"
+      responses:
+        '200':
+          description: "交换请求分页列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeRequestPage'
+    post:
+      tags: ["Exchange Requests"]
+      summary: "发布交换请求"
+      operationId: "createExchangeRequest"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExchangeRequestCreate'
+      responses:
+        '201':
+          description: "交换请求创建成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeRequestDTO'
+  /api/exchange-requests/{id}:
+    get:
+      tags: ["Exchange Requests"]
+      summary: "查看交换请求详情"
+      operationId: "getExchangeRequestById"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "详情"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeRequestDTO'
+  /api/exchange-requests/{id}/accept:
+    post:
+      tags: ["Exchange Requests"]
+      summary: "接受交换请求（匹配用户操作）"
+      operationId: "acceptExchangeRequest"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "接受成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeRequestDTO'
+  /api/exchange-requests/{id}/decline:
+    post:
+      tags: ["Exchange Requests"]
+      summary: "拒绝交换请求"
+      operationId: "declineExchangeRequest"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "已拒绝"
+  /api/exchange-requests/{id}/cancel:
+    post:
+      tags: ["Exchange Requests"]
+      summary: "取消交换请求（发起者操作）"
+      operationId: "cancelExchangeRequest"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "已取消"
+
+  # ======================== 交易订单 ========================
+  /api/trade-orders:
+    get:
+      tags: ["Trade Orders"]
+      summary: "获取交易订单列表（我买入/卖出的）"
+      operationId: "listTradeOrders"
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: ["buyer", "seller"]
+          description: "以买家/卖家视角查看"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["pending", "confirmed", "shipped", "completed", "cancelled", "expired"]
+      responses:
+        '200':
+          description: "订单列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeOrderPage'
+    post:
+      tags: ["Trade Orders"]
+      summary: "创建交易订单（购买藏品）"
+      operationId: "createTradeOrder"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeOrderCreateRequest'
+      responses:
+        '201':
+          description: "订单创建成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeOrderDTO'
+  /api/trade-orders/{id}:
+    get:
+      tags: ["Trade Orders"]
+      summary: "获取订单详情"
+      operationId: "getTradeOrderById"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "订单详情"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeOrderDTO'
+    put:
+      tags: ["Trade Orders"]
+      summary: "更新订单状态（确认/发货/完成/取消）"
+      operationId: "updateTradeOrderStatus"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeOrderStatusRequest'
+      responses:
+        '200':
+          description: "状态更新成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeOrderDTO'
+  /api/trade-orders/{id}/review:
+    post:
+      tags: ["Trade Reviews"]
+      summary: "评价交易订单"
+      operationId: "createTradeReview"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "订单ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeReviewRequest'
+      responses:
+        '201':
+          description: "评价成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeReviewDTO'
+
+  # ======================== 信用记录 ========================
+  /api/users/{id}/credit:
+    get:
+      tags: ["Trade Reviews"]
+      summary: "查看用户信用记录"
+      operationId: "getUserCreditRecords"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "用户ID"
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: "信用记录列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditRecordPage'
+
+  # ======================== 帖子 ========================
+  /api/posts:
+    get:
+      tags: ["Posts"]
+      summary: "浏览帖子列表"
+      operationId: "listPosts"
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: "按作者过滤"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["published", "pending_review"]
+        - name: keyword
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "帖子分页列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostPage'
+    post:
+      tags: ["Posts"]
+      summary: "发布帖子"
+      operationId: "createPost"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+      responses:
+        '201':
+          description: "发布成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostDTO'
+  /api/posts/{id}:
+    get:
+      tags: ["Posts"]
+      summary: "查看帖子详情"
+      operationId: "getPostById"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "帖子详情"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostDTO'
+    put:
+      tags: ["Posts"]
+      summary: "编辑帖子"
+      operationId: "updatePost"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+      responses:
+        '200':
+          description: "更新成功"
+    delete:
+      tags: ["Posts"]
+      summary: "删除帖子"
+      operationId: "deletePost"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+  /api/posts/{id}/like:
+    post:
+      tags: ["Posts"]
+      summary: "点赞帖子"
+      operationId: "likePost"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "点赞成功"
+    delete:
+      tags: ["Posts"]
+      summary: "取消点赞"
+      operationId: "unlikePost"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "取消成功"
+  /api/posts/{id}/favorite:
+    post:
+      tags: ["Favorites"]
+      summary: "收藏帖子"
+      operationId: "favoritePost"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "收藏成功"
+    delete:
+      tags: ["Favorites"]
+      summary: "取消收藏"
+      operationId: "unfavoritePost"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "取消成功"
+
+  # ======================== 评论 ========================
+  /api/posts/{postId}/comments:
+    get:
+      tags: ["Comments"]
+      summary: "获取帖子的评论列表"
+      operationId: "listCommentsByPost"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: "评论分页列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentPage'
+    post:
+      tags: ["Comments"]
+      summary: "发布评论"
+      operationId: "createComment"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+      responses:
+        '201':
+          description: "评论成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentDTO'
+  /api/posts/{postId}/comments/{id}:
+    put:
+      tags: ["Comments"]
+      summary: "编辑评论"
+      operationId: "updateComment"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "评论ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentRequest'
+      responses:
+        '200':
+          description: "更新成功"
+    delete:
+      tags: ["Comments"]
+      summary: "删除评论"
+      operationId: "deleteComment"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "评论ID"
+      responses:
+        '204':
+          description: "删除成功"
+  /api/comments/{id}/like:
+    post:
+      tags: ["Comments"]
+      summary: "点赞评论"
+      operationId: "likeComment"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "评论ID"
+      responses:
+        '200':
+          description: "点赞成功"
+    delete:
+      tags: ["Comments"]
+      summary: "取消点赞评论"
+      operationId: "unlikeComment"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "取消成功"
+
+  # ======================== 动态 ========================
+  /api/dynamics:
+    get:
+      tags: ["Dynamics"]
+      summary: "获取动态列表（关注用户的动态或自己）"
+      operationId: "listDynamics"
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: "查看指定用户的动态"
+      responses:
+        '200':
+          description: "动态分页列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DynamicPage'
+    post:
+      tags: ["Dynamics"]
+      summary: "发布动态"
+      operationId: "createDynamic"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DynamicRequest'
+      responses:
+        '201':
+          description: "发布成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DynamicDTO'
+  /api/dynamics/{id}:
+    delete:
+      tags: ["Dynamics"]
+      summary: "删除动态"
+      operationId: "deleteDynamic"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+
+  # ======================== 关注 ========================
+  /api/users/{id}/follow:
+    post:
+      tags: ["Follows"]
+      summary: "关注用户"
+      operationId: "followUser"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "被关注用户ID"
+      responses:
+        '200':
+          description: "关注成功"
+    delete:
+      tags: ["Follows"]
+      summary: "取消关注"
+      operationId: "unfollowUser"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "取消关注"
+  /api/users/{id}/followers:
+    get:
+      tags: ["Follows"]
+      summary: "获取用户粉丝列表"
+      operationId: "listFollowers"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: "粉丝列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+  /api/users/{id}/following:
+    get:
+      tags: ["Follows"]
+      summary: "获取用户关注列表"
+      operationId: "listFollowing"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: "关注列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+
+  # ======================== 举报 ========================
+  /api/reports:
+    post:
+      tags: ["Reports"]
+      summary: "举报内容"
+      operationId: "createReport"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+      responses:
+        '201':
+          description: "举报提交成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDTO'
+    get:
+      tags: ["Reports"]
+      summary: "管理员查看举报列表"
+      operationId: "adminListReports"
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["pending", "resolved", "dismissed"]
+      responses:
+        '200':
+          description: "举报列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportPage'
+  /api/reports/{id}/resolve:
+    put:
+      tags: ["Reports"]
+      summary: "管理员处理举报"
+      operationId: "resolveReport"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: ["resolved", "dismissed"]
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: "处理成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDTO'
+
+  # ======================== 资讯 ========================
+  /api/articles:
+    get:
+      tags: ["Articles"]
+      summary: "查看资讯列表"
+      operationId: "listArticles"
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["draft", "published"]
+      responses:
+        '200':
+          description: "资讯分页列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticlePage'
+    post:
+      tags: ["Articles"]
+      summary: "发布资讯"
+      operationId: "createArticle"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+      responses:
+        '201':
+          description: "发布成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleDTO'
+  /api/articles/{id}:
+    get:
+      tags: ["Articles"]
+      summary: "查看资讯详情"
+      operationId: "getArticleById"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "资讯详情"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleDTO'
+    put:
+      tags: ["Articles"]
+      summary: "编辑资讯"
+      operationId: "updateArticle"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleRequest'
+      responses:
+        '200':
+          description: "更新成功"
+    delete:
+      tags: ["Articles"]
+      summary: "删除资讯"
+      operationId: "deleteArticle"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+
+  /api/article-categories:
+    get:
+      tags: ["Article Categories"]
+      summary: "获取资讯分类列表"
+      operationId: "listArticleCategories"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "分类列表"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ArticleCategoryDTO'
+    post:
+      tags: ["Article Categories"]
+      summary: "创建资讯分类"
+      operationId: "createArticleCategory"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleCategoryRequest'
+      responses:
+        '201':
+          description: "创建成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleCategoryDTO'
+  /api/article-categories/{id}:
+    put:
+      tags: ["Article Categories"]
+      summary: "更新资讯分类"
+      operationId: "updateArticleCategory"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleCategoryRequest'
+      responses:
+        '200':
+          description: "更新成功"
+    delete:
+      tags: ["Article Categories"]
+      summary: "删除资讯分类"
+      operationId: "deleteArticleCategory"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+
+  # ======================== 公告 ========================
+  /api/announcements:
+    get:
+      tags: ["Announcements"]
+      summary: "查看公告列表"
+      operationId: "listAnnouncements"
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ["draft", "published"]
+      responses:
+        '200':
+          description: "公告分页列表"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnouncementPage'
+    post:
+      tags: ["Announcements"]
+      summary: "发布公告"
+      operationId: "createAnnouncement"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementRequest'
+      responses:
+        '201':
+          description: "发布成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnouncementDTO'
+  /api/announcements/{id}:
+    get:
+      tags: ["Announcements"]
+      summary: "查看公告详情"
+      operationId: "getAnnouncementById"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "公告详情"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnouncementDTO'
+    put:
+      tags: ["Announcements"]
+      summary: "编辑公告"
+      operationId: "updateAnnouncement"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementRequest'
+      responses:
+        '200':
+          description: "更新成功"
+    delete:
+      tags: ["Announcements"]
+      summary: "删除公告"
+      operationId: "deleteAnnouncement"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+
+  # ======================== 分类标签 ========================
+  /api/classification-labels:
+    get:
+      tags: ["Classification Labels"]
+      summary: "获取分类标签列表"
+      operationId: "listClassificationLabels"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            description: "标签类型过滤，如 collection_series, post_tag"
+      responses:
+        '200':
+          description: "标签列表"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClassificationLabelDTO'
+    post:
+      tags: ["Classification Labels"]
+      summary: "创建分类标签"
+      operationId: "createClassificationLabel"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassificationLabelRequest'
+      responses:
+        '201':
+          description: "创建成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassificationLabelDTO'
+  /api/classification-labels/{id}:
+    put:
+      tags: ["Classification Labels"]
+      summary: "更新分类标签"
+      operationId: "updateClassificationLabel"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassificationLabelRequest'
+      responses:
+        '200':
+          description: "更新成功"
+    delete:
+      tags: ["Classification Labels"]
+      summary: "删除分类标签"
+      operationId: "deleteClassificationLabel"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+
+  # ======================== 系统配置 ========================
+  /api/system-configs:
+    get:
+      tags: ["System Configs"]
+      summary: "获取系统配置列表"
+      operationId: "listSystemConfigs"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "配置列表"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SystemConfigDTO'
+    post:
+      tags: ["System Configs"]
+      summary: "新增配置项"
+      operationId: "createSystemConfig"
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemConfigRequest'
+      responses:
+        '201':
+          description: "创建成功"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemConfigDTO'
+  /api/system-configs/{id}:
+    put:
+      tags: ["System Configs"]
+      summary: "更新配置项"
+      operationId: "updateSystemConfig"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemConfigRequest'
+      responses:
+        '200':
+          description: "更新成功"
+    delete:
+      tags: ["System Configs"]
+      summary: "删除配置项"
+      operationId: "deleteSystemConfig"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: "删除成功"
+
+  # ======================== 管理员 - 数据统计 ========================
+  /api/admin/statistics/user-registrations:
+    get:
+      tags: ["Admin - Statistics"]
+      summary: "用户注册量统计"
+      operationId: "statUserRegistrations"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: "统计数据"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticDTO'
+  /api/admin/statistics/user-activity:
+    get:
+      tags: ["Admin - Statistics"]
+      summary: "用户活跃度统计"
+      operationId: "statUserActivity"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: "活跃度数据"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticDTO'
+  /api/admin/statistics/collections:
+    get:
+      tags: ["Admin - Statistics"]
+      summary: "藏品总数及热门藏品统计"
+      operationId: "statCollections"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: "藏品统计"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticDTO'
+  /api/admin/statistics/trades:
+    get:
+      tags: ["Admin - Statistics"]
+      summary: "交易数量与金额统计"
+      operationId: "statTrades"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: "交易统计"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticDTO'
+
+  # ======================== 管理员 - 内容审核 ========================
+  /api/admin/review/posts/{id}:
+    put:
+      tags: ["Admin - Review"]
+      summary: "审核帖子"
+      operationId: "reviewPost"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewActionRequest'
+      responses:
+        '200':
+          description: "审核完成"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostDTO'
+  /api/admin/review/comments/{id}:
+    put:
+      tags: ["Admin - Review"]
+      summary: "审核评论"
+      operationId: "reviewComment"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewActionRequest'
+      responses:
+        '200':
+          description: "审核完成"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentDTO'
+  /api/admin/review/trades/{id}:
+    put:
+      tags: ["Admin - Review"]
+      summary: "审核交易/异常交易处理"
+      operationId: "reviewTrade"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "订单ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewActionRequest'
+      responses:
+        '200':
+          description: "审核完成"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeOrderDTO'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT 认证令牌"
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: "页码，从1开始"
+    SizeParam:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: "每页记录数"
+
+  responses:
+    BadRequest:
+      description: "请求参数错误"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: "未认证或登录已过期"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: "无权限"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: "资源未找到"
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # 通用
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: "错误码"
+        message:
+          type: string
+          description: "错误信息"
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    # 认证
+    RegisterRequest:
+      type: object
+      required: ["username", "password"]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        password:
+          type: string
+          minLength: 6
+          format: password
+        nickname:
+          type: string
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          maxLength: 20
+    LoginRequest:
+      type: object
+      required: ["username", "password"]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: "JWT 访问令牌"
+        tokenType:
+          type: string
+          default: "Bearer"
+        user:
+          $ref: '#/components/schemas/UserDTO'
+
+    # 用户
+    UserDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        nickname:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: string
+        status:
+          type: string
+          enum: ["active", "disabled"]
+        creditScore:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UserUpdateRequest:
+      type: object
+      properties:
+        nickname:
+          type: string
+        email:
+          type: string
+        phone
