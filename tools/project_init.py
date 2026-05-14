@@ -39,10 +39,23 @@ def init_project_from_template(tech_stack: str, project_name: str, output_dir: s
     if not template_dir.exists():
         raise FileNotFoundError(f"模板目录不存在: {template_dir}")
 
-    # 清空或创建项目目录
+    # 如果目录已存在（恢复模式），只清理源码和构建产物，保留设计文档和 .git
     if project_dir.exists():
-        shutil.rmtree(project_dir)
-    project_dir.mkdir(parents=True, exist_ok=True)
+        for item in project_dir.iterdir():
+            # 保留设计文档、Git 仓库、日志
+            if item.name in (".git", "schema.sql", "api.yaml", "pom.xml", "mvnw", "mvnw.cmd", ".mvn", ".gitignore"):
+                continue
+            if item.name.endswith(".log"):
+                continue
+            if item.is_dir():
+                shutil.rmtree(item, onerror=lambda f, p, e: logger.warning(f"清理目录失败 {p}: {e}"))
+            else:
+                try:
+                    item.unlink()
+                except Exception as e:
+                    logger.warning(f"清理文件失败 {item}: {e}")
+    else:
+        project_dir.mkdir(parents=True, exist_ok=True)
 
     # 生成安全名称（用于 pom.xml artifactId、包名等）
     project_name_safe = _to_safe_name(project_name)

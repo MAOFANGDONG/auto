@@ -84,3 +84,4 @@ paths:
 - 不要使用 Markdown 代码块标记（```）包裹 YAML
 - OpenAPI 的 operationId 必须是有效的 Java 方法名
 - DTO 字段名必须与数据库字段有明确的对应关系
+- **关键优先级：如果输出长度受限，必须优先保证 components/schemas 中所有 DTO 定义完整，宁可精简 path 中的 description**

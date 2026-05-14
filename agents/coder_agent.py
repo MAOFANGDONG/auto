@@ -44,8 +44,9 @@ class CoderAgent:
         api_contract: str,
         model_override: Dict = None,
     ):
-        config = get_agent_model_config("coder", override=model_override)
-        self.llm = get_llm_client(config)
+        self.config = get_agent_model_config("coder", override=model_override)
+        # 保留 LangChain 客户端作为 fallback，但主要使用直接 API 调用
+        self.llm = get_llm_client(self.config)
         self.tech_stack = tech_stack
         self.project_name = project_name
         self.db_schema = db_schema
@@ -53,7 +54,7 @@ class CoderAgent:
         self.project_dir = os.path.join(WORKSPACE_DIR, project_name)
         self.project_name_safe = project_name.lower().replace(" ", "_").replace("-", "_")
 
-        logger.info(f"[Coder Agent] 初始化，技术栈: {tech_stack}")
+        logger.info(f"[Coder Agent] 初始化，技术栈: {tech_stack}, 模型: {self.config['provider']}/{self.config['model']}")
 
     def generate_all_modules(self, modules: List[Any]) -> List[Dict]:
         """
@@ -266,12 +267,10 @@ class CoderAgent:
         )
 
         logger.info(f"[Phase 1] 调用 LLM 生成 {module_name} 骨架...")
-        response = self.llm.invoke([
-            ("system", system_prompt),
-            ("user", task_prompt)
-        ])
+        content = self._call_api(system_prompt, task_prompt)
+        logger.info(f"[Phase 1] LLM 返回 {len(content)} 字符")
 
-        files = self._parse_code_output(response.content)
+        files = self._parse_code_output(content)
 
         # 过滤已存在文件 + 预置类
         files = self._filter_preset_duplicates(files)
@@ -314,12 +313,10 @@ class CoderAgent:
         )
 
         logger.info(f"[Phase 2] 调用 LLM 生成 {module_name} 实现...")
-        response = self.llm.invoke([
-            ("system", system_prompt),
-            ("user", task_prompt)
-        ])
+        content = self._call_api(system_prompt, task_prompt)
+        logger.info(f"[Phase 2] LLM 返回 {len(content)} 字符")
 
-        files = self._parse_code_output(response.content)
+        files = self._parse_code_output(content)
 
         # 过滤已存在文件 + 预置类 + Phase 1 已生成的骨架
         files = self._filter_preset_duplicates(files)
@@ -338,6 +335,50 @@ class CoderAgent:
                 safe_write_file(self.project_dir, f["file_path"], f["content"])
 
         return files
+
+    def _call_api(self, system_prompt: str, user_prompt: str) -> str:
+        """直接调用 OpenAI API，绕过 LangChain（解决 LangChain 大 prompt 阻塞问题）"""
+        from openai import OpenAI
+        import httpx
+
+        provider_cfg = {
+            "deepseek": {
+                "base_url": "https://api.deepseek.com/v1",
+                "api_key_env": "DEEPSEEK_API_KEY",
+            },
+            "openai": {
+                "base_url": "https://api.openai.com/v1",
+                "api_key_env": "OPENAI_API_KEY",
+            },
+        }.get(self.config["provider"], {"base_url": "https://api.deepseek.com/v1", "api_key_env": "DEEPSEEK_API_KEY"})
+
+        api_key = os.getenv(provider_cfg["api_key_env"])
+        if not api_key:
+            raise ValueError(f"缺少 API Key: {provider_cfg['api_key_env']}")
+
+        http_client = httpx.Client(timeout=httpx.Timeout(1800.0, connect=10, read=1800, write=30))
+
+        client = OpenAI(
+            base_url=provider_cfg["base_url"],
+            api_key=api_key,
+            timeout=120,
+            max_retries=2,
+            http_client=http_client,
+        )
+
+        logger.debug(f"[_call_api] 发送请求，prompt 长度: sys={len(system_prompt)}, user={len(user_prompt)}")
+        response = client.chat.completions.create(
+            model=self.config["model"],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=self.config["temperature"],
+            max_tokens=self.config["max_tokens"],
+        )
+        content = response.choices[0].message.content
+        logger.debug(f"[_call_api] 收到响应，长度: {len(content)}")
+        return content
 
     def _filter_preset_duplicates(self, files: List[Dict]) -> List[Dict]:
         """过滤掉与预置类重复的文件"""

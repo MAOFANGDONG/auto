@@ -14,6 +14,7 @@ from loguru import logger
 from config import get_agent_model_config
 from prompts.prompt_loader import prompts
 from tools.retry_wrapper import retry_with_fallback
+from tools.api_repair import repair_api_yaml
 
 
 class ArchitectAgent:
@@ -94,15 +95,39 @@ class ArchitectAgent:
         if not api_result.get("project_structure", "").strip():
             api_result["project_structure"] = "src/main/java/com/example/demo/\n  entity/\n  controller/\n  service/\n  repository/"
 
-        # 保存阶段 2 输出用于调试
+        # 保存阶段 2 原始输出用于调试
         with open(os.path.join(debug_dir, "api_raw.txt"), "w", encoding="utf-8") as f:
             f.write(api_raw)
+
+        # ========== 阶段 3：验证并自动修复 API 契约 ==========
+        api_contract = api_result.get("api_contract", "")
+        if api_contract.strip() and db_schema.strip():
+            logger.info("[Architect Agent] 阶段 3/3：验证并修复 API 契约...")
+            try:
+                repaired_api, repair_report = repair_api_yaml(api_contract, db_schema)
+                api_contract = repaired_api
+                logger.info(
+                    f"[Architect Agent] API 修复报告: "
+                    f"语法修复={repair_report.get('yaml_syntax_fixed', False)}, "
+                    f"缺失 schemas={len(repair_report.get('missing_schemas', []))}, "
+                    f"成功添加={len(repair_report.get('added_schemas', []))}, "
+                    f"错误={len(repair_report.get('errors', []))}"
+                )
+                if repair_report.get('added_schemas'):
+                    logger.info(f"[Architect Agent] 自动推导 schemas: {repair_report['added_schemas']}")
+                if repair_report.get('errors'):
+                    logger.warning(f"[Architect Agent] 修复错误: {repair_report['errors']}")
+                # 保存修复后的输出
+                with open(os.path.join(debug_dir, "api_repaired.yaml"), "w", encoding="utf-8") as f:
+                    f.write(api_contract)
+            except Exception as e:
+                logger.warning(f"[Architect Agent] API 修复失败，使用原始结果: {e}")
 
         logger.info("[Architect Agent] 架构设计完成")
         return {
             "db_schema": db_schema,
-            "api_contract": api_result["api_contract"],
-            "project_structure": api_result["project_structure"],
+            "api_contract": api_contract,
+            "project_structure": api_result.get("project_structure", ""),
         }
 
     def _extract_from_requirements(self, requirements_summary: str) -> tuple:
@@ -247,7 +272,7 @@ class ArchitectAgent:
         if not api_key:
             raise ValueError(f"缺少 API Key: {provider_cfg['api_key_env']}")
 
-        http_client = httpx.Client(timeout=httpx.Timeout(120.0, connect=10, read=120, write=30))
+        http_client = httpx.Client(timeout=httpx.Timeout(1800.0, connect=10, read=1800, write=30))
 
         client = OpenAI(
             base_url=provider_cfg["base_url"],

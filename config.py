@@ -112,8 +112,8 @@ def get_llm_client(config: Dict):
             f"缺少 API Key: 请设置环境变量 {provider_cfg['api_key_env']}"
         )
 
-    # 底层 HTTP 超时配置：连接10s + 读取120s + 写入30s
-    timeout = httpx.Timeout(120.0, connect=10, read=120, write=30)
+    # 底层 HTTP 超时配置：连接10s + 读取1800s(30min) + 写入30s
+    timeout = httpx.Timeout(1800.0, connect=10, read=1800, write=30)
     http_client = httpx.Client(timeout=timeout)
 
     return ChatOpenAI(
@@ -122,7 +122,7 @@ def get_llm_client(config: Dict):
         api_key=api_key,
         temperature=config["temperature"],
         max_tokens=config["max_tokens"],
-        timeout=120,
+        timeout=1800,
         max_retries=2,
         http_client=http_client,
     )
