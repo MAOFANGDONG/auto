@@ -1,0 +1,103 @@
+## 当前任务（Phase 1：骨架生成）
+生成本模块的骨架代码，**只生成以下四类文件**，不要生成其他任何东西：
+
+- **Entity**（JPA 实体类，继承 BaseEntity）
+- **Repository**（JPA 接口，继承 JpaRepository）
+- **Service 接口**（只有方法签名，不写任何实现逻辑）
+- **DTO**（请求/响应对象）
+
+## 模块信息
+- 模块名称：{{ module_name }}
+- 模块描述：{{ module_description }}
+- 模块类型：{{ module_type }}
+- 核心功能：{{ core_features }}
+- 涉及实体：{{ entities }}
+- 预估接口数：{{ estimated_apis }}
+
+## 技术栈
+{{ tech_stack_detail }}
+
+## 数据库 Schema
+{{ db_schema }}
+
+## API 契约
+{{ api_contract }}
+
+## 【核心】模块开发计划清单（必须严格遵循，不得自由发挥）
+{{ module_plan }}
+
+### 清单使用规则（违反会导致编译失败）
+1. **Entity 字段必须与清单中的"实体"部分完全一致**
+   - 字段名、类型一个字不能改
+   - 清单里有 `price:BigDecimal`，Entity 里就必须有 `private BigDecimal price;`
+   - 禁止擅自增加清单中没有的字段
+2. **Service 接口方法必须与清单中的"Service接口"部分完全一致**
+   - 方法名、参数类型、返回类型必须一模一样
+   - 清单里有 `register(UserRegisterRequest): UserResponse`，接口就必须是这个签名
+   - 禁止自行增减方法
+3. **DTO 字段必须与清单中的"DTO"部分完全一致**
+   - 字段名、类型必须匹配
+   - (required) 标记的字段在请求 DTO 中必须加 `@NotBlank` 或 `@NotNull`
+4. **字段映射必须遵守清单中的"字段映射"部分**
+   - Entity 的字段名和 DTO 的字段名如果不同，清单会明确标注
+   - 禁止同一个概念用不同的名字（如 Entity 用 price，DTO 用 amount）
+
+## 模块业务上下文
+本模块的核心业务目标：{{ module_description }}
+需要实现的核心功能点：
+{{ core_features_detail }}
+
+## 已预置的公共类（禁止重复生成）
+以下类已由项目模板预置，直接 import 使用即可：
+- `com.example.{{ project_name_lower }}.common.Result<T>` — 统一响应体，静态方法：success(T)/error(String)/error(int,String)
+- `com.example.{{ project_name_lower }}.common.PageResult<T>` — 分页响应体，静态方法：of(Page<T>)/of(Page<T>, int)，setter：setTotal/setRecords/setPageSize/setPage
+- `com.example.{{ project_name_lower }}.util.JwtUtil` — JWT 工具，方法：generateToken(Long,String)/parseToken(String)/getUserIdFromToken(String)/validateToken(String)
+- `com.example.{{ project_name_lower }}.entity.BaseEntity` — 基础实体，提供 createdAt/updatedAt，所有 Entity 必须继承
+- `com.example.{{ project_name_lower }}.exception.BusinessException` — 业务异常
+
+## Entity 设计规范
+1. 必须继承 `BaseEntity`（已有 createdAt/updatedAt）
+2. 使用 JPA 注解：`@Entity`、`@Table`、`@Id`、`@GeneratedValue`
+3. **字段必须与模块开发计划清单完全一致**
+4. 布尔字段命名不加 is 前缀（如 `deleted` 而非 `isDeleted`）
+
+## Service 接口设计规范
+1. Service 接口**只定义方法签名**，不写 `@Service` 注解，不写方法体
+2. **方法名、参数、返回类型必须与模块开发计划清单完全一致**
+3. 接口中的 DTO 参数和返回值必须是当前模块已定义的 DTO 类
+
+## DTO 设计规范
+1. **字段名、类型必须与模块开发计划清单完全一致**
+2. 请求 DTO 需要校验注解：`@NotBlank`、`@NotNull`、`@Size`、`@Email` 等
+3. 响应 DTO 不需要校验注解
+
+## Repository 设计规范
+1. 继承 `JpaRepository<Entity, Long>`
+2. 方法命名必须符合 Spring Data JPA 规范：
+   - 查询：`findByXxx`、`findByXxxAndYyy`、`findFirstByXxx`
+   - 存在判断：`existsByXxx`
+   - 计数：`countByXxx`
+   - **禁止使用非规范前缀**（如 mark/updateAll/modify 等），如需自定义查询必须使用 `@Query` 注解
+3. 如需分页查询，返回 `Page<T>`，参数 `Pageable`
+
+## 跨模块契约（已存在的文件，禁止重复生成）
+{{ contract_hint }}
+
+## 禁止生成
+- ❌ ServiceImpl（Phase 2 再生成）
+- ❌ Controller（Phase 2 再生成）
+- ❌ Result / PageResult / JwtUtil / BaseEntity / BusinessException（已预置）
+- ❌ Application.java / WebConfig.java / SecurityConfig.java（已预置）
+
+## 输出格式
+严格的 JSON 数组，每个元素是一个文件：
+```json
+[
+  {
+    "file_path": "src/main/java/com/example/xxx/entity/User.java",
+    "content": "package com.example.xxx.entity;\n\n..."
+  }
+]
+```
+
+**只输出 JSON，不要 Markdown 代码块，不要解释。**

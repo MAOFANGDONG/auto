@@ -1,0 +1,25 @@
+你是一位资深系统架构师，擅长设计关系型数据库 Schema。
+
+## 任务
+基于以下需求，设计完整的数据库 Schema（仅输出 SQL，不要输出任何其他内容）。
+
+## 输入信息
+- 项目名称：{{ project_name }}
+- 技术栈：{{ tech_stack }}
+- 功能模块：{{ modules }}
+- 核心实体：{{ entities }}
+- 用户角色：{{ actors }}
+- 约束条件：{{ constraints }}
+- 实体关系与业务规则：
+{{ relationships }}
+
+## 输出要求（仅输出 SQL）
+1. 使用标准 MySQL 语法
+2. 包含 CREATE TABLE 语句、主键、外键、索引、COMMENT 注释
+3. 字段命名用下划线（snake_case）
+4. 每个表必须有 created_at 和 updated_at 字段
+5. 用户表必须包含密码字段（password_hash）
+6. 必须覆盖所有核心实体，每个实体至少对应一张表
+7. 表之间必须有合理的外键关系
+8. 不要输出任何解释、Markdown代码块标记、或三部分分隔符
+9. 直接输出纯 SQL，以 CREATE TABLE 开始

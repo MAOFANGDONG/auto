@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Build outputs
+*.class
+*.jar
+target/
+build/
+dist/
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project workspace & outputs
+workspace/
+*.docx

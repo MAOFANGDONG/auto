@@ -1,0 +1,19 @@
+# 核心框架（不锁死版本，适配 Python 3.14）
+langgraph>=0.2.45
+langchain>=0.3.0
+langchain-openai>=0.2.0
+
+# 数据校验与工具
+pydantic>=2.9.0
+python-dotenv>=1.0.0
+jinja2>=3.1.4
+
+# Docker 沙箱
+docker>=7.0.0
+
+# 日志与终端美化
+loguru>=0.7.2
+rich>=13.8.0
+
+# Web 界面（第二阶段，可选）
+streamlit>=1.38.0

@@ -1,0 +1,56 @@
+## 当前任务
+生成以下模块的代码：
+- 模块名称：{{ module_name }}
+- 模块描述：{{ module_description }}
+- 模块类型：{{ module_type }}
+- 核心功能：{{ core_features }}
+- 涉及实体：{{ entities }}
+- 预估接口数：{{ estimated_apis }}
+- 依赖模块：{{ dependencies }}
+- 任务类型：{{ task_type }}  （backend / frontend / miniapp）
+
+## 技术栈
+{{ tech_stack_detail }}
+
+## 数据库 Schema
+{{ db_schema }}
+
+## API 契约（相关部分）
+{{ api_contract }}
+
+## 需要生成的文件
+{{ file_list }}
+
+## 模块业务上下文
+本模块的核心业务目标：{{ module_description }}
+需要实现的核心功能点：
+{{ core_features_detail }}
+
+## 严格要求
+1. **包名统一**：所有 Java 文件必须使用 `package com.example.{{ project_name_lower }}` 开头，子包只能是 `.entity`、`.controller`、`.service`、`.repository`、`.dto`、`.config`、`.common`、`.util`、`.exception`
+2. **禁止 BOM**：文件内容不允许以 BOM 头开头
+3. **禁止中文标识符**：类名、方法名、变量名、包名、artifactId 必须是英文
+4. **使用 jakarta 而非 javax**：SpringBoot 3.x 必须用 `jakarta.persistence.*`、`jakarta.validation.*`
+5. **自包含**：每个模块的代码必须自包含，不能引用其他模块未定义的类（除非是基础实体如 User）
+6. **统一响应**：如果 Controller 需要返回统一响应体，必须在 `common/Result.java` 中定义 Result 类（包含 code, message, data 字段）
+7. **不要生成 Application.java**：主启动类已由模板预置
+8. **Lombok 推荐**：实体类和 DTO 优先使用 @Data/@Getter/@Setter，系统会自动处理兼容性
+9. **依赖已预置**：pom.xml 已包含 spring-boot-starter-web、data-jpa、validation、security、jjwt、mysql-connector、springdoc
+
+## 输出格式（必须遵循 SWE-agent 原则）
+
+以 JSON 数组输出，每个元素是一个文件：
+
+```json
+[
+  {
+    "file_path": "src/main/java/com/example/xxx/entity/User.java",
+    "content": "package com.example.xxx.entity;\n\n..."
+  }
+]
+```
+
+**注意**：
+- 只输出 JSON，不要 Markdown 代码块，不要解释
+- 确保 JSON 格式合法（引号转义、逗号位置正确）
+- 文件内容必须完整可编译

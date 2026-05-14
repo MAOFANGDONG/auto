@@ -1,0 +1,83 @@
+## 当前任务（Phase 2：业务实现生成）
+生成本模块的业务实现代码，**只生成以下两类文件**：
+
+- **ServiceImpl**（实现 Service 接口，写业务逻辑）
+- **Controller**（REST API 接口，调用 Service）
+
+## 模块信息
+- 模块名称：{{ module_name }}
+- 模块描述：{{ module_description }}
+- 模块类型：{{ module_type }}
+- 核心功能：{{ core_features }}
+- 涉及实体：{{ entities }}
+
+## 技术栈
+{{ tech_stack_detail }}
+
+## 已存在的文件（禁止重复生成）
+{{ existing_files_hint }}
+
+## 跨模块 API 契约（必须严格遵循）
+{{ contract_hint }}
+
+## 【核心】模块开发计划清单（必须严格遵循）
+{{ module_plan }}
+
+### 清单使用规则（违反会导致编译失败）
+1. **ServiceImpl 必须实现 Service 接口中声明的每一个方法**
+   - 方法签名必须与接口完全一致
+   - 方法体中只能使用清单中已声明的 Entity 字段和 DTO 字段
+2. **Controller 的 URL 路径、HTTP 方法必须与清单中的"Controller"部分完全一致**
+   - 路径必须以 `/api/` 开头
+   - `→` 右侧的方法名必须是 Service 接口中已声明的方法
+3. **Entity → DTO 转换时，字段必须严格按清单中的"字段映射"执行**
+   - `entity.getPrice()` 对应 `dto.setPrice(...)`
+   - **禁止调用不存在的 getter/setter**
+   - 如果 Entity 没有某个字段，不要硬造一个 setter 调用
+4. **禁止自行创造新的 Service 方法或 Controller 端点**
+
+## ServiceImpl 实现规范
+1. 必须 `implements` 对应的 Service 接口
+2. 必须实现接口中定义的**所有方法**，一个都不能少
+3. 使用 `@Service` 注解
+4. 通过构造函数注入 Repository：`private final XxxRepository xxxRepository;`
+5. 业务逻辑写在 ServiceImpl 中，禁止在 Repository 中写逻辑
+6. 异常处理：业务异常抛出 `BusinessException`，系统异常让 GlobalExceptionHandler 处理
+
+## Controller 规范
+1. 使用 `@RestController` + `@RequestMapping("/api/xxx")`
+2. 通过构造函数注入 Service 接口：`private final XxxService xxxService;`
+3. 返回统一响应体 `Result<T>`，使用 `Result.success(data)` 或 `Result.error(message)`
+4. **只能调用 Service 接口中已定义的方法**
+5. 参数校验使用 `@Valid`
+6. JWT 用户ID获取：`jwtUtil.getUserIdFromToken(token)`
+
+## 分页查询规范
+1. Controller 接收 `page`（从1开始）和 `size` 参数
+2. ServiceImpl 内部转为 `PageRequest.of(page - 1, size)`
+3. 返回 `PageResult<T>`，使用 `PageResult.of(pageData)` 或手动 `new PageResult<>()` + setter
+4. 如果使用 `new PageResult<>()`，必须调用 `setTotal`、`setRecords`、`setPageSize`、`setPage`
+
+## 已预置的公共类（直接 import 使用）
+- `com.example.{{ project_name_lower }}.common.Result<T>`
+- `com.example.{{ project_name_lower }}.common.PageResult<T>`
+- `com.example.{{ project_name_lower }}.util.JwtUtil`
+- `com.example.{{ project_name_lower }}.exception.BusinessException`
+
+## 禁止生成
+- ❌ Entity / Repository / Service 接口 / DTO（Phase 1 已生成）
+- ❌ Result / PageResult / JwtUtil / BaseEntity / BusinessException（已预置）
+- ❌ Application.java / WebConfig.java / SecurityConfig.java（已预置）
+
+## 输出格式
+严格的 JSON 数组：
+```json
+[
+  {
+    "file_path": "src/main/java/com/example/xxx/service/impl/UserServiceImpl.java",
+    "content": "..."
+  }
+]
+```
+
+**只输出 JSON，不要 Markdown 代码块，不要解释。**

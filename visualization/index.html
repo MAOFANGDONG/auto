@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>auto-graduation 系统可视化</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --card-bg-hover: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.3);
+            --pm: #f472b6;
+            --architect: #a78bfa;
+            --coder: #38bdf8;
+            --builder: #34d399;
+            --fix: #fbbf24;
+            --error: #ef4444;
+            --border: #334155;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent), var(--pm));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            z-index: 1;
+        }
+        .header p {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 1;
+        }
+        .header .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .section-title .icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        /* Flowchart */
+        .mermaid {
+            background: #0b1120;
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        /* Detail Panel */
+        .detail-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .agent-card {
+            background: linear-gradient(135deg, var(--card-bg) 0%, #252f47 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .agent-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            transition: width 0.3s;
+        }
+        .agent-card:hover::before { width: 100%; opacity: 0.05; }
+        .agent-card.pm::before { background: var(--pm); }
+        .agent-card.architect::before { background: var(--architect); }
+        .agent-card.coder::before { background: var(--coder); }
+        .agent-card.builder::before { background: var(--builder); }
+        .agent-card.fix::before { background: var(--fix); }
+        .agent-card:hover {
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+        .agent-card.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        .agent-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .agent-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+        }
+        .agent-badge.pm { background: var(--pm); }
+        .agent-badge.architect { background: var(--architect); }
+        .agent-badge.coder { background: var(--coder); }
+        .agent-badge.builder { background: var(--builder); }
+        .agent-badge.fix { background: var(--fix); }
+        .agent-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .agent-role {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .agent-desc {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .agent-meta {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Info Display */
+        .info-display {
+            background: #0b1120;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid var(--border);
+            min-height: 200px;
+        }
+        .info-display h3 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        .info-display pre {
+            background: #1a1f2e;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            color: #a5b4fc;
+            border: 1px solid var(--border);
+        }
+        .data-flow-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .data-flow-table th {
+            background: #252f47;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+        }
+        .data-flow-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        .data-flow-table tr:hover td {
+            background: #252f47;
+            color: var(--text);
+        }
+
+        /* File Tree */
+        .file-tree {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+        }
+        .tree-dir {
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .tree-file {
+            color: var(--text-secondary);
+        }
+        .tree-file:hover {
+            color: var(--text);
+        }
+        .tree-comment {
+            color: #64748b;
+            font-style: italic;
+        }
+
+        /* Design Cards */
+        .design-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        .design-card {
+            background: linear-gradient(135deg, #1e293b 0%, #252f47 100%);
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        .design-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+        .design-card h4 {
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+        .design-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Status Indicator */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: blink 2s infinite;
+        }
+        .status-dot.running { background: var(--builder); }
+        .status-dot.idle { background: var(--text-secondary); }
+        .status-dot.error { background: var(--error); }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8rem; }
+            .header .stats { flex-direction: column; gap: 1rem; }
+            .container { padding: 1rem; }
+            .detail-panel { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>auto-graduation</h1>
+        <p>多 Agent 自动代码生成系统 — 架构可视化</p>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value">5</div>
+                <div class="stat-label">Agent 节点</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">16</div>
+                <div class="stat-label">Python 文件</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">4</div>
+                <div class="stat-label">技术栈模板</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">~65%</div>
+                <div class="stat-label">一次跑通率</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Agent 流程图 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon" style="background: var(--accent); color: white;">⚡</div>
+                Agent 协作流程
+            </div>
+            <div class="mermaid">
+flowchart TB
+    subgraph Input["输入"]
+        Report["📄 开题报告"]
+    end
+
+    subgraph Pipeline["LangGraph 流水线"]
+        direction TB
+        PM["🔴 PM Agent<br/>需求解析"]
+        Review1["✅ 自动确认"]
+        Arch["🟣 Architect<br/>架构设计"]
+        Review2["✅ 自动确认"]
+        Coder["🔵 Coder Agent<br/>代码生成<br/><small>串行+契约注入</small>"]
+        Builder["🟢 Builder Agent<br/>编译验证"]
+        Fix["🟡 Fix Agent<br/>错误修复<br/><small>最多3次</small>"]
+        Error["❌ 终止<br/>需人工介入"]
+        Deliver["🎉 交付"]
+    end
+
+    Report --> PM
+    PM --> Review1
+    Review1 --> Arch
+    Arch --> Review2
+    Review2 --> Coder
+    Coder --> Builder
+    Builder -- 编译失败 --> Fix
+    Fix --> Builder
+    Builder -- 编译通过 --> Deliver
+    Fix -- 3次失败 --> Error
+
+    style PM fill:#be185d,color:#fff
+    style Arch fill:#7c3aed,color:#fff
+    style Coder fill:#0284c7,color:#fff
+    style Builder fill:#059669,color:#fff
+    style Fix fill:#d97706,color:#fff
+    style Deliver fill:#059669,color:#fff
+    style Error fill:#dc2626,color:#fff
+            </div>
+        </div>
+
+        <!-- Agent 详情卡片 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon" style="background: var(--pm); color: white;">🤖</div>
+                Agent 详情面板
+                <span style="margin-left: auto; font-size: 0.85rem; color: var(--text-secondary);">点击卡片查看交互</span>
+            </div>
+            <div class="detail-panel">
+                <div class="agent-card pm active" onclick="showAgent('pm')">
+                    <div class="agent-header">
+                        <div class="agent-badge pm">PM</div>
+                        <div>
+                            <div class="agent-name">PM Agent</div>
+                            <div class="agent-role">项目经理 / 需求解析</div>
+                        </div>
+                    </div>
+                    <div class="agent-desc">从中文开题报告中提取结构化需求：项目名、模块列表、实体、角色、约束、复杂度评估。</div>
+                    <div class="agent-meta">输入: report_text | 输出: JSON (project_name, modules...)</div>
+                </div>
+
+                <div class="agent-card architect" onclick="showAgent('architect')">
+                    <div class="agent-header">
+                        <div class="agent-badge architect">AR</div>
+                        <div>
+                            <div class="agent-name">Architect Agent</div>
+                            <div class="agent-role">架构师 / 设计数据库与 API</div>
+                        </div>
+                    </div>
+                    <div class="agent-desc">基于需求设计数据库 Schema（SQL）、OpenAPI 契约（YAML）、推荐目录结构。使用原生 OpenAI API。</div>
+                    <div class="agent-meta">输入: modules, requirements | 输出: db_schema, api_contract</div>
+                </div>
+
+                <div class="agent-card coder" onclick="showAgent('coder')">
+                    <div class="agent-header">
+                        <div class="agent-badge coder">CD</div>
+                        <div>
+                            <div class="agent-name">Coder Agent</div>
+                            <div class="agent-role">代码生成器 / 核心引擎</div>
+                        </div>
+                    </div>
+                    <div class="agent-desc">串行生成所有模块代码。关键改进：契约注入——从已生成模块提取 API 签名注入后续 prompt。</div>
+                    <div class="agent-meta">输入: modules, db_schema, api_contract | 输出: code_files[]</div>
+                </div>
+
+                <div class="agent-card builder" onclick="showAgent('builder')">
+                    <div class="agent-header">
+                        <div class="agent-badge builder">BD</div>
+                        <div>
+                            <div class="agent-name">Builder Agent</div>
+                            <div class="agent-role">构建验证器 / 编译检查</div>
+                        </div>
+                    </div>
+                    <div class="agent-desc">优先使用 mvnw 编译项目，超时 600 秒。支持 Java（Maven）和 Python（pip）两种构建方式。</div>
+                    <div class="agent-meta">输入: project_name, tech_stack | 输出: build_result (success, stderr)</div>
+                </div>
+
+                <div class="agent-card fix" onclick="showAgent('fix')">
+                    <div class="agent-header">
+                        <div class="agent-badge fix">FX</div>
+                        <div>
+                            <div class="agent-name">Fix Agent</div>
+                            <div class="agent-role">编译错误修复器</div>
+                        </div>
+                    </div>
+                    <div class="agent-desc">基于 SWE-agent ReAct 循环分析编译日志并修复。支持 add/modify/delete/replace_import 操作。最多 3 次。</div>
+                    <div class="agent-meta">输入: build_result (stdout, stderr) | 输出: changes[]</div>
+                </div>
+            </div>
+
+            <!-- 动态详情显示区 -->
+            <div class="info-display" id="agentDetail">
+                <h3>🔴 PM Agent 详情</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">点击上方卡片切换不同 Agent 的详细信息</p>
+                <pre id="detailContent">文件: agents/pm_agent.py
+关键类: PMAgent
+方法: parse(report_text) → Dict
+
+核心逻辑:
+1. 截断超长报告（>15000字符）
+2. 加载 pm_agent.txt prompt 模板
+3. 调用 LLM 解析
+4. _extract_json(): 3层fallback提取JSON
+   - 直接解析
+   - 提取 ```json 代码块
+   - 提取任意 {...} 内容
+5. 补全默认值（所有字段都有兜底）
+
+输出示例:
+{
+  "project_name": "campus_secondhand_trade",
+  "tech_stack_hint": "SpringBoot",
+  "modules": [
+    {"name": "用户管理", "description": "..."}
+  ],
+  "complexity": "medium"
+}</pre>
+            </div>
+        </div>
+
+        <!-- 数据流 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon" style="background: var(--architect); color: white;">📊</div>
+                Agent 数据流
+            </div>
+            <table class="data-flow-table">
+                <tr>
+                    <th>Agent</th>
+                    <th>读取的状态字段</th>
+                    <th>写入的状态字段</th>
+                    <th>关键转换</th>
+                </tr>
+                <tr>
+                    <td><span style="color:var(--pm)">●</span> PM Agent</td>
+                    <td>report_text</td>
+                    <td>project_name, tech_stack, modules, requirements_summary</td>
+                    <td>中文文本 → 结构化 JSON</td>
+                </tr>
+                <tr>
+                    <td><span style="color:var(--architect)">●</span> Architect</td>
+                    <td>project_name, tech_stack, modules, requirements_summary</td>
+                    <td>db_schema, api_contract</td>
+                    <td>需求 → 数据库 + API 设计</td>
+                </tr>
+                <tr>
+                    <td><span style="color:var(--coder)">●</span> Coder</td>
+                    <td>tech_stack, modules, db_schema, api_contract</td>
+                    <td>code_files[]</td>
+                    <td>设计 → 代码文件列表</td>
+                </tr>
+                <tr>
+                    <td><span style="color:var(--builder)">●</span> Builder</td>
+                    <td>tech_stack, project_name, code_files</td>
+                    <td>build_results, project_ready</td>
+                    <td>代码 → 编译结果</td>
+                </tr>
+                <tr>
+                    <td><span style="color:var(--fix)">●</span> Fix</td>
+                    <td>tech_stack, project_name, build_results</td>
+                    <td>（直接修改磁盘文件）</td>
+                    <td>编译错误 → 文件修改</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 契约注入详解 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon" style="background: var(--coder); color: white;">🔗</div>
+                核心改进：契约注入机制
+            </div>
+            <div class="mermaid">
+sequenceDiagram
+    participant C1 as Coder<br/>模块1
+    participant Pool as 契约池
+    participant C2 as Coder<br/>模块2
+    participant C3 as Coder<br/>模块3
+    participant C4 as Coder<br/>模块4
+    participant C5 as Coder<br/>模块5
+
+    C1->>Pool: 生成 UserRepository<br/>+ UserEntity<br/>→ 提取方法签名 & 字段
+    C2->>Pool: 读取契约池<br/>知道 UserRepository.findByUsername()<br/>UserEntity 字段: id, username...
+    C2->>Pool: 生成 OrderRepository<br/>+ OrderEntity<br/>→ 追加到契约池
+    C3->>Pool: 读取契约池<br/>知道 UserRepository + OrderRepository<br/>所有方法签名 & 字段
+    C3->>Pool: 生成 ProductRepository...
+    C4->>Pool: 读取契约池...
+    C5->>Pool: 读取契约池...
+            </div>
+            <div style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+                <p>💡 <strong>原理</strong>：每生成一个模块后，自动提取该模块的 Repository 方法签名和 Entity 字段，注入到后续模块的 prompt。LLM 看到的是"真实的 API"而非"猜测的 API"。</p>
+                <p style="margin-top: 0.5rem;">🛡️ <strong>防膨胀</strong>：契约摘要设置总长度预算 2500 字符，按优先级排序 Repository > common > entity > dto > util。</p>
+            </div>
+        </div>
+
+        <!-- 项目文件结构 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon" style="background: var(--builder); color: white;">📁</div>
+                项目文件结构
+            </div>
+            <div class="file-tree">
+<span class="tree-dir">auto-graduation/</span>
+├── <span class="tree-file">main.py</span>                    <span class="tree-comment"># 入口 + LangGraph 状态机</span>
+├── <span class="tree-file">state.py</span>                   <span class="tree-comment"># AgentState 类型定义</span>
+├── <span class="tree-file">config.py</span>                  <span class="tree-comment"># 全局配置 + LLM 客户端</span>
+├── <span class="tree-file">requirements.txt</span>           <span class="tree-comment"># Python 依赖</span>
+├── <span class="tree-file">.env</span>                       <span class="tree-comment"># API Key 等敏感配置</span>
+│
+├── <span class="tree-dir">agents/</span>                    <span class="tree-comment"># 5 个 Agent 实现</span>
+│   ├── <span class="tree-file">pm_agent.py</span>            <span class="tree-comment"># PM - 需求解析</span>
+│   ├── <span class="tree-file">architect_agent.py</span>     <span class="tree-comment"># Architect - 架构设计</span>
+│   ├── <span class="tree-file">coder_agent.py</span>         <span class="tree-comment"># Coder - 代码生成 (核心)</span>
+│   ├── <span class="tree-file">builder_agent.py</span>       <span class="tree-comment"># Builder - 编译验证</span>
+│   └── <span class="tree-file">fix_agent.py</span>           <span class="tree-comment"># Fix - 错误修复</span>
+│
+├── <span class="tree-dir">prompts/</span>                   <span class="tree-comment"># Prompt 模板 (Jinja2)</span>
+│   ├── <span class="tree-file">prompt_loader.py</span>       <span class="tree-comment"># 热加载器</span>
+│   ├── <span class="tree-file">pm_agent.txt</span>           <span class="tree-comment"># PM 提示词</span>
+│   ├── <span class="tree-file">architect_agent.txt</span>    <span class="tree-comment"># 架构师提示词</span>
+│   ├── <span class="tree-file">coder_system.txt</span>       <span class="tree-comment"># Coder 全局规范</span>
+│   ├── <span class="tree-file">coder_task.txt</span>         <span class="tree-comment"># Coder 任务提示词</span>
+│   └── <span class="tree-file">builder_agent.txt</span>      <span class="tree-comment"># Fix 提示词</span>
+│
+├── <span class="tree-dir">tools/</span>                     <span class="tree-comment"># 工具层</span>
+│   ├── <span class="tree-file">file_writer.py</span>         <span class="tree-comment"># 安全文件写入</span>
+│   ├── <span class="tree-file">retry_wrapper.py</span>       <span class="tree-comment"># 重试与容错</span>
+│   ├── <span class="tree-file">project_init.py</span>        <span class="tree-comment"># 项目模板初始化</span>
+│   ├── <span class="tree-file">lombok_remover.py</span>      <span class="tree-comment"># Lombok 后处理</span>
+│   └── <span class="tree-file">truncation_checker.py</span>  <span class="tree-comment"># 截断检测</span>
+│
+├── <span class="tree-dir">templates/</span>                 <span class="tree-comment"># 技术栈骨架模板</span>
+│   ├── <span class="tree-dir">java-springboot/</span>       <span class="tree-comment"># Java + SpringBoot</span>
+│   ├── <span class="tree-dir">python-fastapi/</span>        <span class="tree-comment"># Python + FastAPI</span>
+│   ├── <span class="tree-dir">vue3-admin/</span>            <span class="tree-comment"># Vue3 管理后台</span>
+│   └── <span class="tree-dir">wechat-miniapp/</span>        <span class="tree-comment"># 微信小程序</span>
+│
+├── <span class="tree-dir">skills/</span>                    <span class="tree-comment"># 技能规范</span>
+│   └── <span class="tree-file">swe-agent/SKILL.md</span>   <span class="tree-comment"># SWE-agent 原则</span>
+│
+├── <span class="tree-dir">test/</span>                      <span class="tree-comment"># 测试</span>
+│
+└── <span class="tree-dir">workspace/</span>                 <span class="tree-comment"># 生成的项目存放目录</span>
+            </div>
+        </div>
+
+        <!-- 关键设计决策 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="icon" style="background: var(--fix); color: white;">💡</div>
+                关键设计决策
+            </div>
+            <div class="design-grid">
+                <div class="design-card">
+                    <h4>串行生成而非并行</h4>
+                    <p>最初使用 ThreadPoolExecutor(max_workers=3) 并行生成，但 DeepSeek API 有并发限制导致全部挂起。改为串行后稳定性大幅提升。</p>
+                </div>
+                <div class="design-card">
+                    <h4>Lombok 后处理而非禁用</h4>
+                    <p>模板保留 Lombok 依赖，生成后用 lombok_remover.py 转为显式代码。LLM 生成时可用简洁的 @Data，同时兼容旧版 Maven。</p>
+                </div>
+                <div class="design-card">
+                    <h4>Maven Wrapper 优先</h4>
+                    <p>Builder Agent 优先使用项目自带的 mvnw，避免系统 Maven 3.6.3 与 JDK 21 的兼容性 bug。</p>
+                </div>
+                <div class="design-card">
+                    <h4>Architect 绕过 LangChain</h4>
+                    <p>直接使用 openai 库调用 API，绕过 LangChain 在 Python 3.14 下的 Pydantic V1 兼容性警告和潜在阻塞。</p>
+                </div>
+                <div class="design-card">
+                    <h4>自动确认节点</h4>
+                    <p>human_review 节点目前自动 approve，用于后台批量测试。生产环境可改为真正的人工确认。</p>
+                </div>
+                <div class="design-card">
+                    <h4>H2 内存数据库默认</h4>
+                    <p>模板默认使用 H2 内存库而非 MySQL，降低本地运行门槛。部署时切换为 MySQL 配置即可。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部 -->
+        <div style="text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.85rem;">
+            <p>auto-graduation 可视化面板 | 基于项目实际代码生成</p>
+            <p style="margin-top: 0.5rem;">用浏览器直接打开此 HTML 文件即可查看</p>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1e293b',
+                primaryTextColor: '#f1f5f9',
+                primaryBorderColor: '#334155',
+                lineColor: '#64748b',
+                secondaryColor: '#0f172a',
+                tertiaryColor: '#252f47',
+                fontFamily: 'Segoe UI, Microsoft YaHei, sans-serif'
+            },
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                useMaxWidth: true
+            }
+        });
+
+        const agentDetails = {
+            pm: {
+                title: '🔴 PM Agent 详情',
+                content: `文件: agents/pm_agent.py
+关键类: PMAgent
+方法: parse(report_text) → Dict
+
+核心逻辑:
+1. 截断超长报告（>15000字符）
+2. 加载 pm_agent.txt prompt 模板
+3. 调用 LLM 解析
+4. _extract_json(): 3层fallback提取JSON
+   - 直接解析
+   - 提取 \`\`\`json 代码块
+   - 提取任意 {...} 内容
+5. 补全默认值（所有字段都有兜底）
+
+装饰器: @retry_with_fallback(max_retries=3, delay=3)
+Fallback: 返回默认项目结构（2个模块）
+
+输出字段:
+- project_name: 英文标识符风格
+- tech_stack_hint: "SpringBoot" / "Django" 等
+- modules: [{name, description}]
+- entities: ["用户", "商品"]
+- actors: ["学生", "管理员"]
+- constraints: ["必须使用 MySQL"]
+- complexity: simple / medium / complex`
+            },
+            architect: {
+                title: '🟣 Architect Agent 详情',
+                content: `文件: agents/architect_agent.py
+关键类: ArchitectAgent
+方法: design(project_name, tech_stack, modules, requirements) → Dict
+
+核心逻辑:
+1. 加载 architect_agent.txt prompt
+2. _call_api(): 直接使用 openai 库（绕过 LangChain）
+3. _parse_sections(): 用正则提取三部分
+   - === DATABASE_SCHEMA ===
+   - === OPENAPI_CONTRACT ===
+   - === PROJECT_STRUCTURE ===
+4. 空值保护（新增）:
+   - schema 为空 → _generate_fallback_schema()
+   - 根据模块名智能推断表结构
+
+装饰器: @retry_with_fallback(max_retries=3, delay=5)
+Fallback: 返回基础 users 表 + 默认 API
+
+输出字段:
+- db_schema: CREATE TABLE SQL
+- api_contract: OpenAPI YAML
+- project_structure: 目录树文本`
+            },
+            coder: {
+                title: '🔵 Coder Agent 详情',
+                content: `文件: agents/coder_agent.py
+关键类: CoderAgent
+核心方法:
+- generate_all_modules(modules) → code_files[]
+- _generate_module_files(module, system_prompt, existing_files, contract_hint)
+- _extract_contracts(code_files) → str
+- _post_process_java_files()
+
+生成策略（两阶段+契约注入）:
+Stage 1: 串行生成每个模块
+  for module in modules:
+    contract_hint = _extract_contracts(contract_files)
+    files = _generate_module_files(module, ..., contract_hint)
+    contract_files.extend(关键文件)
+
+Stage 2: 后处理
+  1. 统一包名 → com.example.campustrade
+  2. 去 BOM
+  3. 删除重复 Application
+  4. 重命名中文目录
+  5. Lombok 移除
+  6. 根据路径修正 package/import
+  7. 截断检测
+
+契约注入预算:
+- MAX_TOTAL_CHARS = 2500
+- 优先级: Repository > common > entity > dto > util
+- Repository 最多保留 5 个方法
+- Entity 最多保留 8 个字段
+
+输出: JSON 数组 [{file_path, content, language}]`
+            },
+            builder: {
+                title: '🟢 Builder Agent 详情',
+                content: `文件: agents/builder_agent.py
+关键类: BuilderAgent
+方法: build_and_verify() → Dict
+
+构建流程:
+1. 查找构建工具: mvnw.cmd > mvn
+2. 检查 pom.xml / requirements.txt 存在性
+3. os.chdir 切换到项目目录（规避中文路径）
+4. 执行: mvnw clean install -DskipTests
+5. 超时 600 秒
+6. 截取 stdout/stderr 最后 5000 字符
+
+错误处理:
+- 项目目录不存在 → 直接返回失败
+- pom.xml 不存在 → 提示 Coder 未生成有效项目
+- mvn 命令找不到 → 提示安装 Maven
+- 超时 → 返回超时错误
+
+Java 构建:
+- 使用 shell=True (Windows)
+- 超时 600s
+- 返回 {success, stage, stdout, stderr, fix_attempts}
+
+Python 构建:
+- pip install -r requirements.txt
+- py_compile 语法检查`
+            },
+            fix: {
+                title: '🟡 Fix Agent 详情',
+                content: `文件: agents/fix_agent.py
+关键类: FixAgent
+方法: analyze_and_fix(build_result) → Dict
+
+修复循环:
+1. 加载 builder_agent.txt prompt
+2. 传入 stderr[:5000] + stdout[:3000]
+3. LLM 分析并返回 JSON 修复计划
+4. _parse_fix_plan(): 解析 JSON
+5. _apply_change(): 执行修复
+
+支持的操作:
+- add: 在文件末尾追加文本
+- modify: 字符串替换 (old → new)
+- delete: 删除匹配的文本块
+- replace_import: 替换 import 语句
+
+局限:
+- 只能处理单文件修改
+- 字符串精确匹配，微小差异即失败
+- 对跨文件依赖错误无效（如 Repository 缺方法）
+
+最多重试: 3 次
+3 次失败后 → error_handler_node → 人工介入`
+            }
+        };
+
+        function showAgent(type) {
+            // Remove active class from all cards
+            document.querySelectorAll('.agent-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            // Add active to clicked
+            event.currentTarget.classList.add('active');
+
+            const detail = agentDetails[type];
+            const display = document.getElementById('agentDetail');
+            display.innerHTML = `
+                <h3>${detail.title}</h3>
+                <pre id="detailContent">${detail.content}</pre>
+            `;
+        }
+    </script>
+</body>
+</html>
